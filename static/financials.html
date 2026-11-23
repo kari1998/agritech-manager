@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>AgriManager - Financials & P&L</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+    </head>
+    <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col">
+
+        <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex justify-between items-center shadow-md">
+            <h1 class="text-xl font-bold text-emerald-400 flex items-center gap-2">🌱 AgriManager<span class="text-xs bg-slate-700 text-slate-300 px-2 py-0.5 rounded">Financials</span></h1>
+            <nav class="flex gap-5 text-sm font-medium">
+                <a href="/" class="text-slate-400 hover:text-emerald-400 transition">Operations</a>
+                <a href="/harvests" class="text-slate-400 hover:text-emerald-400 transition">Harvests & Stock</a>
+                <a href="/financial" class="text-emerald-400 font-semibold">Financials & P&L</a>
+                <a href="/account" class="text-slate-400 hover:text-emerald-400 transition">Account</a>
+                <button type="button" onclick="signOut()" class="bg-slate-700 hover:bg-rose-700 text-slate-200 hover:text-white px-3 py-1 rounded text-xs transition">
+                    Sign Out
+                </button>
+            </nav>
+        </header>
+
+        <main class="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
+
+            <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 shadow">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                    <h2 class="text-lg font-semibold text-slate-200">Farm Financials & P&L Ledger</h2>
+                    <div class="flex gap-6 text-sm bg-slate-900 px-4 py-2 rounded-lg border border-slate-700">
+                        <span class="text-emerald-400">Revenue: <strong id="fin-revenue">Ksh 0</strong></span>
+                        <span class="text-rose-400">Expenses: <strong id="fin-expenses">Ksh 0</strong></span>
+                        <span class="text-cyan-400">Net Profit: <strong id="fin-profit">Ksh 0</strong></span>
+                    </div>
+                </div>
+
+                <form id="financial-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 mb-6 bg-slate-900 p-4 rounded-lg border border-slate-700">
+                    <div id="harvest-sale-fields" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-700 rounded-lg p-3">
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">From Harvest Stock (Optional)</label>
+                            <select id="tx-harvest-id" class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                                <option value="">-General Income / Not tied to stock -</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Kilograms Sold (kg)</label>
+                            <input type="number" step="0.01" min="0.01" id="tx-quantity-kg" placeholder="e.g. 25" class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Crop Cycle</label>
+                        <select id="fin-cycle-id" required class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-emerald-500">
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Type</label>
+                        <select id="fin-type" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-emerald-500">
+                            <option value="Expense">Expense</option>
+                            <option value="Income">Income</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Category</label>
+                        <input type="text" id="fin-category" required placeholder="e.g. Fertilizer / Seeds" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Amount (Ksh)</label>
+                        <input type="number" id="fin-amount" required step="0.01" min="0.01" placeholder="0.00" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Date</label>
+                        <input type="date" id="fin-date" required class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div class="flex items-end">
+                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-1.5 px-3 rounded text-sm transition">Add Entry</button>
+                    </div>
+                </form>
+
+                <div class="overflow-x-auto overflow-y-auto max-h-60">
+                    <table class="w-full text-left text-xs text-slate-300">
+                        <thead class="bg-slate-900 text-slate-400 uppercase sticky top-0 z-10">
+                            <tr>
+                                <th class="p-2.5">Date</th>
+                                <th class="p-2.5">Crop / Plot</th>
+                                <th class="p-2.5">Type</th>
+                                <th class="p-2.5">Category</th>
+                                <th class="p-2.5 text-right">Amount (Ksh)</th>
+                                <th class="p-2.5 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="financial-table-body" class="divide-y divide-slate-700">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+                <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 shadow space-y-4">
+                    <div>
+                        <h2 class="text-lg font-semibold text-slate-200">Per-Plot & Per-Crop Profitability</h2>
+                        <p class="text-xs text-slate-400">Compare revenue, expenses, and net profit across each crop cycle.</p>
+                    </div>
+                    <div class="overflow-x-auto overflow-y-auto max-h-60">
+                        <table class="w-full text-left text-xs text-slate-300">
+                            <thead class="bg-slate-900 text-slate-400 uppercase sticky top-0 z-10">
+                                <tr>
+                                    <th class="p-2.5">Crop Cycle</th>
+                                    <th class="p-2.5">Plot</th>
+                                    <th class="p-2.5">Status</th>
+                                    <th class="p-2.5 text-right">Revenue</th>
+                                    <th class="p-2.5 text-right">Expenses</th>
+                                    <th class="p-2.5 text-right">Net Profit</th>
+                                </tr>
+                            </thead>
+                            <tbody id="crop-pnl-body" class="divide-y divide-slate-700"></tbody>
+                        </table>
+                    </div>
+                </div>
+        </main>
+
+        <script src="/static/auth.js"></script>
+       <script>
+            const userId = parseInt(localStorage.getItem('agritech_user_id'), 10);
+            if (!Number.isInteger(userId) || userId <= 0) {
+                localStorage.removeItem('agritech_user_id');
+                window.location.replace('/login');
+                throw new Error('Not logged in - redirecting to /login');
+            }
+
+            function escapeHtml(value) {
+                const div = document.createElement('div');
+                div.textContent = value ?? '';
+                return div.innerHTML;
+            }
+
+            // Turns a FastAPI error "detail" (a string, or a list for validation errors) into readable text
+            function errorText(detail) {
+                if (!detail) return 'Unknown error';
+                if (Array.isArray(detail)) return detail.map(d => d.msg || JSON.stringify(d)).join('; ');
+                return String(detail);
+            }
+
+            function formatMoney(val) {
+                const num = Number(val || 0);
+                return num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+
+            function renderCropProfitability(rows) {
+                const tbody = document.getElementById('crop-pnl-body');
+                if (!tbody) return;
+                tbody.innerHTML = '';
+
+                if (!rows || rows.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="p-3 text-slate-500 text-center">No crop cycles found yet.</td></tr>`;
+                    return;
+                }
+
+                rows.forEach(r => {
+                    const profit = Number(r.net_profit || 0);
+                    const profitColor = profit >= 0 ? 'text-emerald-400' : 'text-rose-400';
+                    const isCompleted = (r.cycle_status || '').toLowerCase() === 'completed';
+                    const statusBadge = isCompleted
+                        ? `<span class="bg-slate-700 text-slate-300 px-2 py-0.5 rounded text-[11px]">Completed</span>`
+                        : `<span class="bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded text-[11px]">Active</span>`;
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="p-2.5 font-medium text-slate-200">${escapeHtml(r.crop_name)}</td>
+                        <td class="p-2.5">${escapeHtml(r.plot_name)}</td>
+                        <td class="p-2.5">${statusBadge}</td>
+                        <td class="p-2.5 text-right text-emerald-300">${formatMoney(r.total_revenue)}</td>
+                        <td class="p-2.5 text-right text-amber-300">${formatMoney(r.total_expenses)}</td>
+                        <td class="p-2.5 text-right font-semibold ${profitColor}">${formatMoney(profit)}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+
+            let availableHarvests = [];
+
+            function toggleHarvestSaleFields() {
+                const typeVal = (document.getElementById('fin-type')?.value || '').toLowerCase();
+                const box = document.getElementById('harvest-sale-fields');
+                if (!box) return;
+                if (typeVal === 'income') {
+                    box.classList.remove('hidden');
+                } else {
+                    box.classList.add('hidden');
+                    const harvestSelect = document.getElementById('tx-harvest-id');
+                    const kgInput = document.getElementById('tx-quantity-kg');
+                    if (harvestSelect) harvestSelect.value = '';
+                    if (kgInput) {
+                        kgInput.value = '';
+                        kgInput.removeAttribute('max');
+                    }
+                }
+            }
+
+            function populateHarvestDropdown(harvests) {
+                availableHarvests = harvests || [];
+                const select = document.getElementById('tx-harvest-id');
+                if (!select) return;
+
+                select.innerHTML = `<option value="">- General Income / Not tied to stock -</option>`;
+                availableHarvests
+                    .filter(h => Number(h.quantity_kg || 0) > 0)
+                    .forEach(h => {
+                        const batchLabel = h.batch_name || h.crop_name || `Batch #${h.harvest_id}`;
+                        const opt = document.createElement('option');
+                        opt.value = h.harvest_id;
+                        opt.text = `${batchLabel} (${Number(h.quantity_kg)} kg available)`;
+                        select.appendChild(opt);
+                    });
+            }
+
+            document.getElementById('tx-harvest-id')?.addEventListener('change', (e) => {
+                const selectedId = parseInt(e.target.value, 10);
+                const kgInput = document.getElementById('tx-quantity-kg');
+                const cycleSelect = document.getElementById('fin-cycle-id');
+                if (!selectedId) {
+                    kgInput?.removeAttribute('max');
+                    return;
+                }
+                const batch = availableHarvests.find(h => Number(h.harvest_id) === selectedId);
+                if (batch) {
+                    if (kgInput) kgInput.max = Number(batch.quantity_kg || 0);
+                    if (batch.cycle_id && cycleSelect) {
+                        cycleSelect.value = batch.cycle_id;
+                    }
+                }
+            });
+
+            document.getElementById('fin-type')?.addEventListener('change', toggleHarvestSaleFields);
+
+            async function deleteTransaction(txId) {
+                if (!confirm('Delete this financial entry?')) return;
+                const res = await fetch(`/api/transactions/${txId}`, {
+                    method: 'DELETE'
+                });
+                if (res.ok) {
+                    loadFinancials();
+                } else {
+                    const err = await res.json();
+                    alert('Could not delete transaction: ' + errorText(err.detail));
+                }
+            }
+
+            document.getElementById('fin-date').value = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);   // today, local time
+
+            async function loadFinancials() {
+                const res = await fetch(`/api/dashboard/${userId}`);
+                if (!res.ok) {
+                    console.error('Failed to load financials: HTTP', res.status);
+                    return;
+                }
+                const data = await res.json();
+
+                populateHarvestDropdown(data.harvests || []);
+                toggleHarvestSaleFields();
+
+                const cycleSelect = document.getElementById('fin-cycle-id');
+                if (cycleSelect && data.crop_cycles) {
+                    cycleSelect.innerHTML = '';
+                    data.crop_cycles.forEach(cycle => {
+                        const opt = document.createElement('option');
+                        opt.value = cycle.cycle_id;
+                        opt.text = `#${cycle.cycle_id} - ${cycle.crop_name} (${cycle.plot_name})`;
+                        cycleSelect.appendChild(opt);
+                    });
+                }
+
+                if (data.financials) {
+                    document.getElementById('fin-revenue').textContent = `Ksh ${data.financials.revenue.toLocaleString()}`;
+                    document.getElementById('fin-expenses').textContent = `Ksh ${data.financials.expenses.toLocaleString()}`;
+                    document.getElementById('fin-profit').textContent = `Ksh ${data.financials.net_profit.toLocaleString()}`;
+                    renderCropProfitability(data.financials.crop_profitability);
+
+                    const finTable = document.getElementById('financial-table-body');
+                    finTable.innerHTML = '';
+                    const ledgerRes = await fetch(`/api/financials/${userId}`);
+                    if (!ledgerRes.ok) {
+                        console.error('Failed to load ledger: HTTP', ledgerRes.status);
+                        return;
+                    }
+                    const ledger = await ledgerRes.json();
+                    ledger.transactions.forEach(t => {
+
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td class="p-2.5">${escapeHtml(t.transaction_date)}</td>
+                            <td class="p-2.5">${escapeHtml(t.crop_name)} (${escapeHtml(t.plot_name)})</td>
+                            <td class="p-2.5"><span class="px-2 py-0.5 rounded text-[10px] ${t.transaction_type === 'Income' ? 'bg-emerald-900 text-emerald-300' : 'bg-rose-900 text-rose-300'}">${escapeHtml(t.transaction_type)}</span></td>
+                            <td class="p-2.5">${escapeHtml(t.category)}</td>
+                            <td class="p-2.5 text-right font-mono ${t.transaction_type === 'Income' ? 'text-emerald-400' : 'text-slate-200'}">Ksh ${Number(t.amount).toLocaleString()}</td>
+                            <td class="p-2.5 text-right"><button type="button" onclick="deleteTransaction(${t.transaction_id})" class="text-rose-400 hover:text-rose-300 text-[11px] font-medium">Delete</button></td>
+                        `;
+
+                        finTable.appendChild(row);
+                    });
+                }
+            }
+
+            document.getElementById('financial-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const payload = {
+                    cycle_id: parseInt(document.getElementById('fin-cycle-id').value),
+                    transaction_type: document.getElementById('fin-type').value,
+                    category: document.getElementById('fin-category').value,
+                    amount: parseFloat(document.getElementById('fin-amount').value),
+                    transaction_date: document.getElementById('fin-date').value,
+                    notes: ""
+                };
+
+                const rawHarvestId = document.getElementById('tx-harvest-id')?.value;
+                const rawKg = document.getElementById('tx-quantity-kg')?.value;
+
+                if (payload.transaction_type.toLowerCase() === 'income' && rawHarvestId) {
+                    payload.harvest_id = parseInt(rawHarvestId, 10);
+                    payload.quantity_kg = parseFloat(rawKg);
+                }
+
+                const res = await fetch('/api/financials', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    document.getElementById('fin-category').value = '';
+                    document.getElementById('fin-amount').value = '';
+                    const kgInput = document.getElementById('tx-quantity-kg');
+                    const harvestSelect = document.getElementById('tx-harvest-id');
+                    if (kgInput) kgInput.value = '';
+                    if (harvestSelect) harvestSelect.value = '';
+                    loadFinancials();
+                } else {
+                    const err = await res.json();
+                    alert('Error saving transaction: ' + errorText(err.detail));
+                }
+            });
+
+            loadFinancials();
+        </script>
+    </body>
+</html>        

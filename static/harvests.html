@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>AgriManager - Harvests & Stock</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+    </head>
+    <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col">
+
+        <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-md">
+            <div class="flex items-center gap-2">
+                <span class="text-2xl">🌱</span>
+                <h1 class="text-xl font-bold text-emerald-400 flex items-center gap-2">
+                    AgriManager
+                    <span class="text-xs bg-slate-700 text-slate-300 px-2 py-0.5 rounded">Harvests & Stock</span>
+                </h1>
+            </div>
+            <nav class="flex flex-wrap gap-5 text-sm font-medium">
+                <a href="/" class="text-slate-400 hover:text-emerald-400 transition">Operations</a>
+                <a href="/harvests" class="text-emerald-400 font-semibold">Harvests & Stock</a>
+                <a href="/financial" class="text-slate-400 hover:text-emerald-400 transition">Financials & P&L</a>
+                <a href="/account" class="text-slate-400 hover:text-emerald-400 transition">Account</a>
+                <button type="button" onclick="signOut()" class="bg-slate-700 hover:bg-rose-700 text-slate-200 hover:text-white px-3 py-1 rounded text-xs transition">
+                    Sign Out
+                </button>
+            </nav>
+        </header>
+
+        <main class="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl shadow">
+                <p class="text-xs text-slate-400 uppercase tracking-wider">Total Harvested</p>
+                <p id="stat-total-harvested" class="text-2xl font-bold text-slate-100 mt-1">0 kg</p>
+            </div>
+            <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl shadow">
+                <p class="text-xs text-slate-400 uppercase tracking-wider">Remaining Stock</p>
+                <p id="stat-remaining-stock" class="text-2xl font-bold text-emerald-400 mt-1">0 kg</p>
+            </div>
+            <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl shadow">
+                <p class="text-xs text-slate-400 uppercase tracking-wider">Active Batches</p>
+                <p id="stat-active-batches" class="text-2xl font-bold text-cyan-400 mt-1">0</p>
+            </div>
+            </div>
+
+            <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 shadow">
+            <h2 class="text-lg font-semibold text-slate-200 mb-4">🧺 Record Harvest Batch</h2>
+
+            <form id="harvest-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 mb-6 bg-slate-900 p-4 rounded-lg border border-slate-700">
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Crop Cycle</label>
+                    <select id="harvest-cycle-id" required class="w-full bg-slate-800 border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-emerald-500">
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Quantity (kg)</label>
+                    <input type="number" id="harvest-qty" required step="0.1" min="0.1" placeholder="e.g. 250" class="w-full bg-slate-800 border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Storage Location</label>
+                    <input type="text" id="harvest-storage" value="Main Store" class="w-full bg-slate-800 border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Harvest Date</label>
+                    <input type="date" id="harvest-date" required class="w-full bg-slate-800 border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Notes (Optional)</label>
+                    <input type="text" id="harvest-notes" placeholder="e.g. Grade A, dried" class="w-full bg-slate-800 border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-emerald-500">
+                </div>
+                <div class="flex items-end">
+                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-1.5 px-3 rounded text-sm transition">Log Harvest</button>
+                </div>
+            </form>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs text-slate-300">
+                    <thead class="bg-slate-900 text-slate-400 uppercase">
+                        <tr>
+                            <th class="p-2.5">Batch</th>
+                            <th class="p-2.5">Date</th>
+                            <th class="p-2.5">Crop / Plot</th>
+                            <th class="p-2.5">Store</th>
+                            <th class="p-2.5">Notes</th>
+                            <th class="p-2.5 text-right">Harvested</th>
+                            <th class="p-2.5 text-right">Remaining</th>
+                            <th class="p-2.5 text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="harvest-table-body" class="divide-y divide-slate-700">
+                        <!-- Populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        </main>
+
+        <script src="/static/auth.js"></script>
+        <script>
+
+        const userId = parseInt(localStorage.getItem('agritech_user_id'), 10);
+        if (!Number.isInteger(userId) || userId <= 0) {
+            localStorage.removeItem('agritech_user_id');
+            window.location.replace('/login');
+            throw new Error('Not logged in - redirecting to /login');
+        }
+
+        function escapeHtml(value) {
+            const div = document.createElement('div');
+            div.textContent = value ?? '';
+            return div.innerHTML;
+        }
+
+        // Turns a FastAPI error "detail" (a string, or a list for validation errors) into readable text
+        function errorText(detail) {
+            if (!detail) return 'Unknown error';
+            if (Array.isArray(detail)) return detail.map(d => d.msg || JSON.stringify(d)).join('; ');
+            return String(detail);
+        }
+
+        // Today's date in the farmer's own timezone, as YYYY-MM-DD
+        // (toISOString() uses UTC, which is a day behind in Kenya between 00:00 and 03:00)
+        function localToday() {
+            const d = new Date();
+            const pad = n => String(n).padStart(2, '0');
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+        }
+
+        document.getElementById('harvest-date').value = localToday();
+
+        async function loadHarvests() {
+            try {
+                const res = await fetch(`/api/dashboard/${userId}`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+
+                const cycleSelect = document.getElementById('harvest-cycle-id');
+                cycleSelect.innerHTML = '';
+                (data.crop_cycles || []).forEach(cycle => {
+                    const opt = document.createElement('option');
+                    opt.value = cycle.cycle_id;
+                    opt.text = `#${cycle.cycle_id} - ${cycle.crop_name} (${cycle.plot_name})`;
+                    cycleSelect.appendChild(opt);
+                });
+
+                const harvests = data.harvests || [];
+                const totalHarvested = harvests.reduce((sum, h) => sum + (Number(h.quantity_kg) || 0), 0);
+                const remainingStock = harvests.reduce((sum, h) => sum + (Number(h.remaining_kg) || 0), 0);
+                const activeBatches = harvests.filter(h => (Number(h.remaining_kg) || 0) > 0).length;
+
+                document.getElementById('stat-total-harvested').textContent = `${totalHarvested.toLocaleString()} kg`;
+                document.getElementById('stat-remaining-stock').textContent = `${remainingStock.toLocaleString()} kg`;
+                document.getElementById('stat-active-batches').textContent = activeBatches;
+
+                const tbody = document.getElementById('harvest-table-body');
+                tbody.innerHTML = '';
+
+                harvests.forEach(h => {
+                    const rem = Number(h.remaining_kg) || 0;
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="p-2.5 font-mono text-emerald-300">#${escapeHtml(h.harvest_id)}</td>
+                        <td class="p-2.5 whitespace-nowrap">${escapeHtml(h.harvest_date)}</td>
+                        <td class="p-2.5">${escapeHtml(h.crop_name)} (${escapeHtml(h.plot_name)})</td>
+                        <td class="p-2.5">${escapeHtml(h.storage_location)}</td>
+                        <td class="p-2.5 text-slate-400">${escapeHtml(h.notes || '-')}</td>
+                        <td class="p-2.5 text-right font-mono">${Number(h.quantity_kg).toLocaleString()} kg</td>
+                        <td class="p-2.5 text-right font-mono ${rem > 0 ? 'text-emerald-400' : 'text-slate-500'}">${rem.toLocaleString()} kg</td>
+                        <td class="p-2.5 text-right">
+                            ${rem > 0
+                                ? `<button type="button" onclick="recordBatchSale(${h.harvest_id}, ${rem})" class="bg-cyan-700 hover:bg-cyan-600 text-white px-2.5 py-1 rounded text-[11px] transition">Sell Stock</button>`
+                                : `<span class="text-slate-500 text-[11px]">Sold Out</span>`
+                            }
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                console.error('Failed to load harvests:', err);
+            }
+        }
+
+        document.getElementById('harvest-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                cycle_id: parseInt(document.getElementById('harvest-cycle-id').value),
+                quantity_kg: parseFloat(document.getElementById('harvest-qty').value),
+                storage_location: document.getElementById('harvest-storage').value.trim() || 'Main Store',
+                harvest_date: document.getElementById('harvest-date').value,
+                notes: document.getElementById('harvest-notes').value.trim()
+            };
+
+            const res = await fetch('/api/harvests', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                document.getElementById('harvest-qty').value = '';
+                document.getElementById('harvest-notes').value = '';
+                loadHarvests();
+            } else {
+                const err = await res.json();
+                alert('Error saving harvest: ' + errorText(err.detail));
+            }
+        });
+
+        async function recordBatchSale(harvestId, maxKg) {
+            const soldInput = prompt(`How many kg sold? (Available: ${maxKg} kg)`);
+            if (soldInput === null) return;   // Cancel pressed
+            const soldKg = Number(soldInput.trim());
+            if (!Number.isFinite(soldKg) || soldKg <= 0) {
+                alert('Please enter the kg sold as a number greater than zero.');
+                return;
+            }
+            if (soldKg > maxKg) {
+                alert(`You only have ${maxKg} kg in this batch.`);
+                return;
+            }
+
+            const amountInput = prompt('Total sale revenue in KSh:');
+            if (amountInput === null) return;
+            const amount = Number(amountInput.replace(/,/g, '').trim());   // allow "12,500"
+            if (!Number.isFinite(amount) || amount <= 0) {
+                alert('Please enter the sale amount as a number greater than zero.');
+                return;
+            }
+
+            const today = localToday();
+
+            const res = await fetch('/api/harvests/sell', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    harvest_id: harvestId,
+                    sold_kg: soldKg,
+                    amount: amount,
+                    sale_date: today,
+                    category: 'Harvest Sale'
+                })
+            });
+
+            if (res.ok) {
+                loadHarvests();
+            } else {
+                const err = await res.json();
+                alert('Error recording sale: ' + errorText(err.detail));
+            }
+        }
+
+        loadHarvests();
+    </script>
+    
+    </body>
+</html>

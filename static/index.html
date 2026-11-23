@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgriTech Manager Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex justify-between items-center shadow-md">
+        <div class="flex items-center space-x-3">
+            <span class="text-2xl">🌱</span>
+            <h1 class="text-xl font-bold tracking-wide text-emerald-400">AgriTech Manager</h1>
+            <span class="text-slate-600">|</span>
+            <span id="farmer-name" class="text-sm font-medium text-slate-200">Loading...</span>
+            <span id="farmer-location" class="text-xs text-slate-400"></span>
+        </div>
+        <nav class="flex gap-6 text-sm font-medium">
+            <a href="/" class="text-emerald-400 font-semibold">Operations</a>
+            <a href="/harvests" class="text-slate-400 hover:text-emerald-400 transition">Harvests & Stock</a>
+            <a href="/financial" class="text-slate-400 hover:text-emerald-400 transition">Financials & P&L</a>
+            <a href="/account" class="text-slate-400 hover:text-emerald-400 transition">Account</a>
+            <div id="setup-nudge" class="hidden bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-xs text-slate-300 flex justify-between items-center">
+            <a href="/account" class="text-emerald-400 hover:underline font-medium">Set up plots & crops →</a>
+            </div>
+            <button type="button" onclick="signOut()" class="bg-slate-700 hover:bg-rose-700 text-slate-200 hover:text-white px-3 py-1 rounded text-xs transition">
+                Sign Out
+            </button>
+        </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        
+        
+        <!-- Dashboard Panels (Left 2 Columns) -->
+        <div class="lg:col-span-2 space-y-6">
+            
+            <!-- Metrics Grid -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl shadow">
+                    <p class="text-xs text-slate-400 uppercase tracking-wider">Total Acreage</p>
+                    <p id="metric-acreage" class="text-2xl font-bold text-emerald-400 mt-1">0 ac</p>
+                </div>
+                <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl shadow">
+                    <p class="text-xs text-slate-400 uppercase tracking-wider">Farm Plots</p>
+                    <p id="metric-plots" class="text-2xl font-bold text-emerald-400 mt-1">0</p>
+                </div>
+                <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl shadow">
+                    <p class="text-xs text-slate-400 uppercase tracking-wider">Active Crops</p>
+                    <p id="metric-crops" class="text-2xl font-bold text-emerald-400 mt-1">0</p>
+                </div>
+                <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl shadow">
+                    <p class="text-xs text-slate-400 uppercase tracking-wider">Total Logs</p>
+                    <p id="metric-logs" class="text-2xl font-bold text-emerald-400 mt-1">0</p>
+                </div>
+            </div>
+
+            <!-- Crop Cycles Table -->
+            <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 shadow">
+                <h2 class="text-lg font-semibold text-slate-200 mb-4">Active Crop Cycles & Plots</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm text-slate-300">
+                        <thead class="bg-slate-700 text-slate-200 uppercase text-xs">
+                            <tr>
+                                <th class="p-3">Cycle ID</th>
+                                <th class="p-3">Plot</th>
+                                <th class="p-3">Soil</th>
+                                <th class="p-3">Crop</th>
+                                <th class="p-3">Planted</th>
+                                <th class="p-3">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cycles-table" class="divide-y divide-slate-700"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Add Plot Form -->
+            <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 shadow">
+                <h2 class="text-lg font-semibold text-slate-200 mb-4">Add a Farm Plot</h2>
+                <form id="plot-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Plot Name</label>
+                        <input type="text" id="plot-name" required placeholder="e.g. Upper Field" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Size (acres)</label>
+                        <input type="number" id="plot-size" required step="0.01" min="0.01" placeholder="e.g. 2.5" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Soil Type</label>
+                        <input type="text" id="plot-soil" placeholder="e.g. Red Clay Loam" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div class="flex items-end">
+                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2 px-4 rounded transition">Add Plot</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 shadow">
+                <h2 class="text-lg font-semibold text-slate-200 mb-4">Assign New Crop to Plot</h2>
+                <form id="cycle-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Select Plot</label>
+                        <select id="cycle-plot-id" required class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500">
+
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Crop Name & Variety</label>
+                        <input type="text" id="cycle-crop-name" required placeholder="e.g. Beans (GLP 2)" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Planting Date</label>
+                        <input type="date" id="cycle-planting-date" required class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Status</label>
+                        <select id="cycle-status" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500">
+                            <option value="Active">Active</option>
+                            <option value="Completed">Completed</option>
+                        </select>
+                    </div>
+                    <div class="sm:col-span-2 lg:col-span-4">
+                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2 px-4 rounded transition">Assign Crop Cycle</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Add Farm Log Form -->
+            <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 shadow">
+                <h2 class="text-lg font-semibold text-slate-200 mb-4">Record Farm Activity / Soil Input</h2>
+                <form id="log-form" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Crop Cycle</label>
+                        <select id="form-cycle-id" required class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500">
+                            <!-- Populated dynamically with your crop cycles -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Log Type</label>
+                        <select id="form-log-type" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500">
+                            <option value="Soil Input">Soil Input</option>
+                            <option value="Management">Management</option>
+                            <option value="Irrigation">Irrigation</option>
+                            <option value="Pest Control">Pest Control</option>
+                            <option value="Harvest">Harvest</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Log Date</label>
+                        <input type="date" id="form-date" required class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div class="sm:col-span-3">
+                        <label class="block text-xs text-slate-400 mb-1">Description</label>
+                        <input type="text" id="form-description" required class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500" placeholder="e.g. Applied foliar feed and checked for fall armyworm.">
+                    </div>
+                    <div class="sm:col-span-3">
+                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2 px-4 rounded transition">Save Log</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 shadow lg:col-span-3">
+                <h2 class="text-lg font-semibold text-emerald-200 mb-2">🌿 AI Fertilizer & Nutrient Calculator</h2>
+                <p class="text-xs text-slate-400 mb-4">Select an active crop cycle to generate exact bag requirements and application schedules.</p>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs text-slate-400 mb-1">Select Active Crop Cycle</label>
+                        <select id="calc-cycle-id" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-200 focus:border-emerald-500">
+
+                        </select>
+                    </div>
+                    <div class="flex items-end">
+                        <button type="button" id="calc-btn" class="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-white font-medium py-2 px-4 rounded transition">Calculate Requirements</button>
+                    </div>
+                </div>
+
+                <div id="calc-results" class="hidden bg-emerald-900 border border-slate-700 rounded-lg p-4 text-slate-300 text-sm whitespace-pre-line">
+                </div>
+            </div>
+
+            <!-- Recent Farm Logs Table -->
+            <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 shadow">
+                <h2 class="text-lg font-semibold text-slate-200 mb-4">Recent Farm Logs</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm text-slate-300">
+                        <thead class="bg-slate-700 text-slate-200 uppercase text-xs">
+                            <tr>
+                                <th class="p-3">Date</th>
+                                <th class="p-3">Crop</th>
+                                <th class="p-3">Type</th>
+                                <th class="p-3">Description</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logs-table" class="divide-y divide-slate-700"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+
+        <!-- AI Agronomist Chat Sidebar (Right Column) -->
+                        <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 shadow flex flex-col h-[600px] lg:h-[calc(100vh-8rem)] lg:sticky lg:top-6 self-start">
+            <h2 class="text-lg font-semibold text-slate-200 mb-3 flex items-center gap-2">
+                <span>🤖</span> AI Agronomist Assistant
+            </h2>
+            <div class="flex items-center gap-2 pb-2.5 mb-2.5 border border-b border-slate-700">
+                <select id="chat-session-select" aria-label="Saved Chats" class="flex-1 min-w-0 bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+                    <option value="">New Agronomist Chat</option>
+                </select>
+                <button type="button" id="new-chat-btn" class="bg-slate-700 hover:bg-slate-600 text-xs font-medium px-2.5 py-1.5 rounded whitespace-nowrap transition">+ New Chat</button>
+            </div>
+            <div id="chat-messages" class="flex-1 min-h-0 bg-slate-900 border border-slate-700 rounded-lg p-3 overflow-y-auto space-y-3 text-sm mb-3">
+                <div class="text-slate-400 text-xs text-center py-2">Connected to your live farm database. Ask me anything about your crops!</div>
+            </div>
+            <form id="chat-form" class="flex gap-2">
+                <input type="text" id="chat-input" placeholder="Ask about fertilizer, yields..." class="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-200 text-sm focus:outline-none focus:border-emerald-500" required>
+                <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded text-sm transition">Send</button>
+            </form>
+        </div>
+
+    </main>
+
+    <script src="/static/auth.js"></script>
+    <script>
+
+        const userId = parseInt(localStorage.getItem('agritech_user_id'), 10);
+        if (!Number.isInteger(userId) || userId <= 0) {
+            localStorage.removeItem('agritech_user_id');
+            window.location.replace('/login');
+            throw new Error('Not logged in - redirecting to /login');
+        }
+
+        // Escape text before putting it into innerHTML, so user input or
+        // AI output can't be run as HTML/JavaScript.
+        function escapeHtml(value) {
+            const div = document.createElement('div');
+            div.textContent = value ?? '';
+            return div.innerHTML;
+        }
+
+        async function loadDashboard() {
+            try {
+                const res = await fetch(`/api/dashboard/${userId}`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                
+                document.getElementById('farmer-name').innerText = data.user.name;
+                document.getElementById('farmer-location').innerText = `(${data.user.location})`;
+                document.getElementById('metric-acreage').innerText = `${data.metrics.total_acreage} ac`;
+                document.getElementById('metric-plots').innerText = data.metrics.plots_count;
+                document.getElementById('metric-crops').innerText = data.metrics.active_crops_count;
+                document.getElementById('metric-logs').innerText = data.metrics.total_logs_count;
+                document.getElementById('cycle-planting-date').value = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);   // today, local time
+
+                const nudge = document.getElementById('setup-nudge');
+                if (nudge) {
+                    const hasCycles = (data.crop_cycles || []).length > 0;
+                    nudge.classList.toggle('hidden', hasCycles);
+                }
+
+                const plotSelect = document.getElementById('cycle-plot-id');
+                plotSelect.innerHTML ='';
+                data.plots.forEach(plot => {
+                    const opt = document.createElement('option');
+                    opt.value = plot.plot_id;
+                    opt.text = `${plot.plot_name} (${plot.size_acres} ac)`;
+                    plotSelect.appendChild(opt);
+                });
+
+                const cyclesBody = document.getElementById('cycles-table');
+                cyclesBody.innerHTML = '';
+                data.crop_cycles.forEach(cycle => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="p-3 font-mono text-emerald-300">#${escapeHtml(cycle.cycle_id)}</td>
+                        <td class="p-3 font-medium text-slate-200">${escapeHtml(cycle.plot_name)} (${escapeHtml(cycle.size_acres)} ac)</td>
+                        <td class="p-3">${escapeHtml(cycle.soil_type)}</td>
+                        <td class="p-3 text-emerald-400 font-semibold">${escapeHtml(cycle.crop_name)}</td>
+                        <td class="p-3">${escapeHtml(cycle.planting_date)}</td>
+                        <td class="p-3"><span class="px-2 py-1 rounded text-xs bg-emerald-900 text-emerald-300">${escapeHtml(cycle.status)}</span></td>
+                    `;
+                    cyclesBody.appendChild(tr);
+                });
+
+                const logsBody = document.getElementById('logs-table');
+                logsBody.innerHTML = '';
+                data.logs.forEach(log => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="p-3 whitespace-nowrap">${escapeHtml(log.log_date)}</td>
+                        <td class="p-3 text-emerald-400 font-medium">${escapeHtml(log.crop_name)}</td>
+                        <td class="p-3"><span class="px-2 py-0.5 rounded text-xs bg-slate-700 text-slate-200">${escapeHtml(log.log_type)}</span></td>
+                        <td class="p-3 text-slate-300">${escapeHtml(log.description)}</td>
+                    `;
+                    logsBody.appendChild(tr);
+                });
+
+                // Fill the farm log dropdown with all of this farmer's crop cycles
+                const logCycleSelect = document.getElementById('form-cycle-id');
+                const previousLogCycle = logCycleSelect.value;
+                logCycleSelect.innerHTML = '';
+                data.crop_cycles.forEach(cycle => {
+                    const opt = document.createElement('option');
+                    opt.value = cycle.cycle_id;
+                    opt.text = `#${cycle.cycle_id} - ${cycle.crop_name} (${cycle.plot_name})`;
+                    logCycleSelect.appendChild(opt);
+                });
+                if (previousLogCycle) logCycleSelect.value = previousLogCycle;
+                if (!document.getElementById('form-date').value) {
+                    document.getElementById('form-date').value = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);   // today, local time
+                }
+
+                // Fill the fertilizer calculator dropdown with active crop cycles
+                const calcSelect = document.getElementById('calc-cycle-id');
+                calcSelect.innerHTML = '';
+                data.crop_cycles
+                    .filter(c => (c.status || '').toLowerCase() === 'active')
+                    .forEach(cycle => {
+                        const opt = document.createElement('option');
+                        opt.value = cycle.cycle_id;
+                        opt.text = `#${cycle.cycle_id} - ${cycle.crop_name} (${cycle.plot_name})`;
+                        calcSelect.appendChild(opt);
+                    });
+            } catch (err) {
+                console.error("Failed to load dashboard data:", err);
+                document.getElementById('farmer-name').innerText = 'Could not load your farm data';
+                document.getElementById('farmer-location').innerText = '(server error - please refresh the page or try again shortly)';
+            }
+        }
+
+        async function calculateFertilizer() {
+            const cycleId = document.getElementById('calc-cycle-id').value;
+            const resultsBox = document.getElementById('calc-results');
+            const btn = document.getElementById('calc-btn');
+
+            if (!cycleId) {
+                alert('Please select a valid active crop cycle.');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Calculating...';
+            resultsBox.classList.remove('hidden');
+            resultsBox.textContent = 'Analyzing soil type, plot acreage, and crop nutrient requirements...';
+
+            try {
+                const res = await fetch('/api/calculate-fertilizer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cycle_id: parseInt(cycleId) })
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    resultsBox.textContent = data.recommendation;
+                } else {
+                    resultsBox.textContent = 'Error: ' + errorText(data.detail);
+                }
+            } catch (err) {
+                resultsBox.textContent = 'Network error occurred while contacting AI agronomist.';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Calculate Requirements';
+            }
+        }
+
+        document.getElementById('calc-btn').addEventListener('click', calculateFertilizer);
+
+        // Turns a FastAPI error "detail" (a string, or a list for validation errors) into readable text
+        function errorText(detail) {
+            if (!detail) return 'Unknown error';
+            if (Array.isArray(detail)) return detail.map(d => d.msg || JSON.stringify(d)).join('; ');
+            return String(detail);
+        }
+
+        document.getElementById('plot-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                plot_name: document.getElementById('plot-name').value,
+                size_acres: parseFloat(document.getElementById('plot-size').value),
+                soil_type: document.getElementById('plot-soil').value
+            };
+
+            const res = await fetch('/api/plots', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                document.getElementById('plot-form').reset();
+                loadDashboard();
+            } else {
+                const errData = await res.json();
+                alert('Error adding plot: ' + errorText(errData.detail));
+            }
+        });
+
+        document.getElementById('cycle-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                plot_id: parseInt(document.getElementById('cycle-plot-id').value),
+                crop_name: document.getElementById('cycle-crop-name').value,
+                planting_date: document.getElementById('cycle-planting-date').value,
+                status:document.getElementById('cycle-status').value
+            };
+
+            const res = await fetch('/api/crop-cycles', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                document.getElementById('cycle-crop-name').value = '';
+                loadDashboard();
+            } else {
+                const errData = await res.json();
+                alert('Error assigning crop: ' + errorText(errData.detail));
+            }
+        });
+
+        document.getElementById('log-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                cycle_id: parseInt(document.getElementById('form-cycle-id').value),
+                log_type: document.getElementById('form-log-type').value,
+                log_date: document.getElementById('form-date').value,
+                description: document.getElementById('form-description').value
+            };
+
+            const res = await fetch('/api/logs', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                document.getElementById('log-form').reset();
+                loadDashboard();
+            } else {
+                const errData = await res.json();
+                alert('Error saving log: ' + errorText(errData.detail));
+            }
+        });
+
+        const chatSessionKey = `agritech_chat_session_${userId}`;
+        let activeSessionId = parseInt(localStorage.getItem(chatSessionKey) || '', 10) || null;
+
+        function setActiveSession(sessionId) {
+            if (sessionId) {
+                activeSessionId = parseInt(sessionId, 10);
+                localStorage.setItem(chatSessionKey, String(activeSessionId));
+            } else {
+                activeSessionId = null;
+                localStorage.removeItem(chatSessionKey);
+            }
+            const select = document.getElementById('chat-session-select');
+            if (select) select.value = activeSessionId ? String(activeSessionId) : '';
+        }
+
+        function resetChatPlaceholder() {
+            const chatContainer = document.getElementById('chat-messages');
+            chatContainer.innerHTML = `<div class="text-slate-400 text-xs text-center py-2">Connected to your live farm database. Ask me anything about your crops!</div>`;
+        }
+
+        function appendChatMessage(role, text) {
+            const chatContainer = document.getElementById('chat-messages');
+            if (role === 'user') {
+                chatContainer.innerHTML += `<div class="bg-slate-800 p-2.5 rounded-lg text-slate-200 ml-4"><strong>You:</strong> ${escapeHtml(text)}</div>`;
+            } else {
+                chatContainer.innerHTML += `<div class="bg-emerald-950/60 border border-emerald-900 p-2.5 rounded-lg text-emerald-200 mr-4 whitespace-pre-line"><strong>AI Agronomist:</strong> ${escapeHtml(text)}</div>`;
+            }
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        async function loadChatHistory(preferredSessionId = activeSessionId) {
+            try {
+                const res = await fetch('/api/chat/sessions');
+                if (!res.ok) return;
+                const data = await res.json();
+                const sessions = data.sessions || [];
+
+                const select = document.getElementById('chat-session-select');
+                select.innerHTML = `<option value="">New Agronomist Chat</option>`;
+                sessions.forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s.session_id;
+                    opt.text = s.message_count ? `${s.title} (${s.message_count})` : s.title;
+                    select.appendChild(opt);
+                });
+
+                const exists = sessions.some(s => Number(s.session_id) == Number(preferredSessionId));
+                if (preferredSessionId && exists) {
+                    setActiveSession(preferredSessionId);
+                    await loadSessionMessages(preferredSessionId);
+                } else {
+                    setActiveSession(null);
+                    resetChatPlaceholder();
+                }
+            } catch (err) {
+                console.error('Failed to load chat history:', err);
+            }
+        }
+
+        async function loadSessionMessages(sessionId) {
+            const chatContainer = document.getElementById('chat-messages');
+            if (!sessionId) {
+                resetChatPlaceholder();
+                return;
+            }
+            try {
+                const res = await fetch(`/api/chat/sessions/${sessionId}/messages`);
+                if (!res.ok) {
+                    setActiveSession(null);
+                    resetChatPlaceholder();
+                    return;
+                }
+                const data = await res.json();
+                chatContainer.innerHTML = '';
+                (data.messages || []).forEach(m => appendChatMessage(m.role, m.content ?? m.message));
+            } catch (err) {
+                console.error('Failed to load session messages:', err);
+            }
+        }
+
+        document.getElementById('chat-session-select').addEventListener('change', async (e) => {
+            const chosenId = e.target.value ? parseInt(e.target.value, 10) : null;
+            setActiveSession(chosenId);
+            await loadSessionMessages(chosenId);
+        });
+
+        document.getElementById('new-chat-btn').addEventListener('click', () => {
+            setActiveSession(null);
+            resetChatPlaceholder();
+            document.getElementById('chat-input').focus();
+        });
+
+        document.getElementById('chat-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim();
+            if (!message) return;
+
+            const chatContainer = document.getElementById('chat-messages');
+            if (!activeSessionId) chatContainer.innerHTML = '';
+            appendChatMessage('user', message);
+            input.value = '';
+
+            const loadingId = 'loading-' + Date.now();
+            chatContainer.innerHTML += `<div id="${loadingId}" class="bg-slate-800 p-2.5 rounded-lg text-slate-400 mr-4 italic">AI Agronomist is thinking...</div>`;
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            try {
+                const res = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: activeSessionId, message })
+                });
+                // A server crash returns plain text, not JSON - don't report that as a network error
+                const data = await res.json().catch(() => ({ detail: `Server error (HTTP ${res.status})` }));
+                document.getElementById(loadingId)?.remove();
+
+                if (res.ok) {
+                    appendChatMessage('model', data.response);
+                    if (data.session_id) {
+                        setActiveSession(data.session_id);
+                        await loadChatHistory(data.session_id);
+                    }
+                } else {
+                    chatContainer.innerHTML += `<div class="bg-red-950/60 border border-red-900 p-2.5 rounded-lg text-red-200 mr-4">Error: ${escapeHtml(errorText(data.detail))}</div>`;
+                }
+            } catch (err) {
+                console.error('Chat request failed:', err);
+                document.getElementById(loadingId)?.remove();
+                chatContainer.innerHTML += `<div class="bg-red-950/60 border border-red-900 p-2.5 rounded-lg text-red-200 mr-4">Network error connecting to AI assistant.</div>`;
+            }
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        });
+
+        loadDashboard();
+        loadChatHistory();
+    </script>
+</body>
+</html>

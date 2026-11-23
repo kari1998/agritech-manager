@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgriManager - Account & Farm Setup</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col">
+
+    <!-- Shared Header & Navigation -->
+    <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-md">
+        <div class="flex items-center gap-2">
+            <span class="text-2xl">🌱</span>
+            <h1 class="text-xl font-bold text-emerald-400 flex items-center gap-2">
+                AgriManager
+                <span class="text-xs bg-slate-700 text-slate-300 px-2 py-0.5 rounded">Account & Setup</span>
+            </h1>
+        </div>
+        <nav class="flex flex-wrap items-center gap-5 text-sm font-medium">
+            <a href="/" class="text-slate-400 hover:text-emerald-400 transition">Operations</a>
+            <a href="/harvests" class="text-slate-400 hover:text-emerald-400 transition">Harvests & Stock</a>
+            <a href="/financial" class="text-slate-400 hover:text-emerald-400 transition">Financials & P&L</a>
+            <a href="/account" class="text-emerald-400 font-semibold">Account</a>
+            <button type="button" onclick="logout()" class="bg-slate-700 hover:bg-rose-700 text-slate-200 hover:text-white px-3 py-1 rounded text-xs transition">
+                Sign Out
+            </button>
+        </nav>
+    </header>
+
+    <main class="flex-1 max-w-5xl w-full mx-auto p-6 space-y-6">
+
+        <!-- 1. Profile Overview & Edit -->
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 shadow">
+            <div class="flex flex-wrap justify-between items-start gap-3 border-b border-slate-700 pb-4 mb-5">
+                <div>
+                    <h2 id="display-name" class="text-xl font-bold text-slate-100">Loading profile...</h2>
+                    <p id="display-email" class="text-sm text-slate-400 mt-0.5">—</p>
+                </div>
+                <span id="display-badge" class="text-xs bg-emerald-950 text-emerald-300 border border-emerald-800 px-3 py-1 rounded-full">
+                    Farmer ID: —
+                </span>
+            </div>
+
+            <div id="save-banner" class="hidden mb-4 bg-emerald-950 border border-emerald-700 text-emerald-300 text-xs rounded px-3 py-2">
+                Profile updated successfully.
+            </div>
+
+            <form id="profile-form" class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Full Name</label>
+                    <input type="text" id="prof-name" required class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Location</label>
+                    <input type="text" id="prof-location" required class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Phone Number</label>
+                    <input type="text" id="prof-phone" placeholder="e.g. +2547..." class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                </div>
+                <div class="flex items-end">
+                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2 px-4 rounded text-sm transition">
+                        Save Profile
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- 2. Farm Setup: Plots & Crop Cycles -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            <!-- Plots Management -->
+            <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 shadow space-y-4">
+                <div>
+                    <h3 class="text-lg font-semibold text-slate-200">Farm Plots</h3>
+                    <p class="text-xs text-slate-400">Define your land blocks or greenhouses.</p>
+                </div>
+
+                <form id="plot-form" class="bg-slate-900 border border-slate-700 rounded-lg p-4 space-y-3">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Plot Name</label>
+                        <input type="text" id="plot-name" required placeholder="e.g. Upper Maize Field" class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Size (Acres)</label>
+                            <input type="number" step="0.1" min="0.1" id="plot-size" required placeholder="e.g. 2.0" class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Soil Type</label>
+                            <input type="text" id="plot-soil" placeholder="e.g. Loam / Red Clay" class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-1.5 px-4 rounded text-sm transition">
+                        Add Plot
+                    </button>
+                </form>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-slate-300">
+                        <thead class="bg-slate-900 text-slate-400 uppercase">
+                            <tr>
+                                <th class="p-2.5">Plot</th>
+                                <th class="p-2.5">Size</th>
+                                <th class="p-2.5">Soil</th>
+                                <th class="p-2.5 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="plots-table-body" class="divide-y divide-slate-700"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Crop Cycles Management -->
+            <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 shadow space-y-4">
+                <div>
+                    <h3 class="text-lg font-semibold text-slate-200">Crop Cycles</h3>
+                    <p class="text-xs text-slate-400">Assign crops to your plots to unlock logging, harvests, and P&L.</p>
+                </div>
+
+                <form id="cycle-form" class="bg-slate-900 border border-slate-700 rounded-lg p-4 space-y-3">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Select Plot</label>
+                        <select id="cycle-plot-id" required class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                            <option value="">Add a plot first...</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Crop Name</label>
+                            <input type="text" id="cycle-crop-name" required placeholder="e.g. Tomatoes (Anna F1)" class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Planting Date</label>
+                            <input type="date" id="cycle-planting-date" required class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                        </div>
+                    </div>
+                    <button type="submit" id="cycle-submit-btn" class="w-full bg-cyan-700 hover:bg-cyan-600 disabled:opacity-40 text-white font-medium py-1.5 px-4 rounded text-sm transition">
+                        Start Crop Cycle
+                    </button>
+                </form>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-slate-300">
+                        <thead class="bg-slate-900 text-slate-400 uppercase">
+                            <tr>
+                                <th class="p-2.5">Crop</th>
+                                <th class="p-2.5">Plot</th>
+                                <th class="p-2.5">Planted</th>
+                                <th class="p-2.5">Status</th>
+                                <th class="p-2.5 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cycles-table-body" class="divide-y divide-slate-700"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <script src="/static/auth.js"></script>
+    <script>
+    const userId = parseInt(localStorage.getItem('agritech_user_id'), 10);
+    if (!Number.isInteger(userId) || userId <= 0) {
+        localStorage.removeItem('agritech_user_id');
+        window.location.replace('/login');
+        throw new Error('Not logged in - redirecting to /login');
+    }
+
+    document.getElementById('cycle-planting-date').value = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);   // today, local time
+
+    function escapeHtml(value) {
+        const div = document.createElement('div');
+        div.textContent = value ?? '';
+        return div.innerHTML;
+    }
+
+    // Turns a FastAPI error "detail" (a string, or a list for validation errors) into readable text
+    function errorText(detail) {
+        if (!detail) return 'Unknown error';
+        if (Array.isArray(detail)) return detail.map(d => d.msg || JSON.stringify(d)).join('; ');
+        return String(detail);
+    }
+
+    function renderAccountData(data) {
+        const user = data.user || {};
+        const plots = data.plots || [];
+        const cycles = data.crop_cycles || [];
+
+        document.getElementById('display-name').textContent = user.name || 'Farmer';
+        document.getElementById('display-email').textContent = user.email || 'No email set';
+        document.getElementById('display-badge').textContent = `Farmer ID: #${user.user_id}`;
+
+        document.getElementById('prof-name').value = user.name || '';
+        document.getElementById('prof-location').value = user.location || 'Kenya';
+        document.getElementById('prof-phone').value = user.phone_number || '';
+
+        // Render Plots Table & Dropdown
+        const plotsBody = document.getElementById('plots-table-body');
+        const plotSelect = document.getElementById('cycle-plot-id');
+        const cycleBtn = document.getElementById('cycle-submit-btn');
+
+        plotsBody.innerHTML = '';
+        plotSelect.innerHTML = '';
+
+        if (plots.length === 0) {
+            plotsBody.innerHTML = `<tr><td colspan="4" class="p-3 text-slate-500 text-center">No plots added yet.</td></tr>`;
+            const opt = document.createElement('option');
+            opt.value = '';
+            opt.text = 'Add a plot first...';
+            plotSelect.appendChild(opt);
+            cycleBtn.disabled = true;
+        } else {
+            cycleBtn.disabled = false;
+            plots.forEach(p => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-2.5 font-medium text-slate-200">${escapeHtml(p.plot_name)}</td>
+                    <td class="p-2.5">${escapeHtml(p.size_acres ?? 0)} ac</td>
+                    <td class="p-2.5 text-slate-400">${escapeHtml(p.soil_type || '-')}</td>
+                    <td class="p-2.5 text-right">
+                        <button type="button" onclick="deletePlot(${p.plot_id})" class="text-rose-400 hover:text-rose-300 text-[11px] font-medium">
+                            Delete
+                        </button>
+                    </td>
+                `;
+                plotsBody.appendChild(tr);
+
+                const opt = document.createElement('option');
+                opt.value = p.plot_id;
+                opt.text = `${p.plot_name} (${p.size_acres ?? 0} ac)`;
+                plotSelect.appendChild(opt);
+            });
+        }
+
+        // Render Crop Cycles Table
+        const cyclesBody = document.getElementById('cycles-table-body');
+        cyclesBody.innerHTML = '';
+
+        if (cycles.length === 0) {
+            cyclesBody.innerHTML = `<tr><td colspan="4" class="p-3 text-slate-500 text-center">No crop cycles started yet.</td></tr>`;
+        } else {
+            cycles.forEach(c => {
+                const isCompleted = (c.status || '').toLowerCase() === 'completed';
+                const statusBadge = isCompleted
+                    ? `<span class="bg-slate-700 text-slate-300 px-2 py-0.5 rounded text-[11px]">Completed</span>`
+                    : `<span class="bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded text-[11px]">Active</span>`;
+
+                const completedBtn = isCompleted
+                    ? ''
+                    : `<button type="button" onclick="completeCycle(${c.cycle_id})" class="text-cyan-400 hover:text-cyan-300 text-[11px] font-medium mr-2">Complete</button>`;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-2.5 font-medium text-emerald-300">${escapeHtml(c.crop_name)}</td>
+                    <td class="p-2.5">${escapeHtml(c.plot_name)}</td>
+                    <td class="p-2.5 whitespace-nowrap text-slate-400">${escapeHtml(c.planting_date || '-')}</td>
+                    <td class="p-2.5">${statusBadge}</td>
+                    <td class="p-2.5 text-right whitespace-nowrap">
+                        ${completedBtn}
+                        <button type="button" onclick="deleteCycle(${c.cycle_id})" class="text-rose-400 hover:text-rose-300 text-[11px] font-medium">
+                            Delete
+                        </button>
+                    </td>
+                `;
+                cyclesBody.appendChild(tr);
+            });
+        }
+    }
+
+    async function completeCycle(cycleId) {
+        if (!confirm('Mark this crop cycle as Completed?')) return;
+        const res = await fetch(`/api/cycles/${cycleId}/complete`, {
+            method: 'PATCH'
+        });
+        if (res.ok) {
+            loadAccount();
+        } else {
+            const err = await res.json();
+            alert('Could not update crop cycle: ' + errorText(err.detail));
+        }
+    }
+
+    async function deleteCycle(cycleId) {
+        if (!confirm('Delete this crop cycle? Only cycles without logs, harvests, or financial records can be deleted.')) return;
+        const res = await fetch(`/api/cycles/${cycleId}`, {
+            method: 'DELETE'
+        });
+        if (res.ok) {
+            loadAccount();
+        } else {
+            const err = await res.json();
+            alert('Could not delete crop cycle: ' + errorText(err.detail));
+        }
+    }
+
+    async function deletePlot(plotId) {
+        if (!confirm('Delete this plot?')) return;
+        const res = await fetch(`/api/plots/${plotId}`, {
+            method: 'DELETE'
+        });
+        if (res.ok) {
+            loadAccount();
+        } else {
+            const err = await res.json();
+            alert('Could not delete plot: ' + errorText(err.detail));
+        }
+    }
+
+    async function loadAccount() {
+        const res = await fetch(`/api/dashboard/${userId}`);
+        if (!res.ok) {
+            console.error('Failed to load account: HTTP', res.status);
+            document.getElementById('display-name').textContent = 'Could not load your account';
+            document.getElementById('display-email').textContent = `Server error (HTTP ${res.status}). Please refresh the page or try again shortly.`;
+            return;
+        }
+        const data = await res.json();
+        if (!data.user || !data.user.user_id) {
+            logout();
+            return;
+        }
+        renderAccountData(data);
+    }
+
+    document.getElementById('profile-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const res = await fetch(`/api/users/${userId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: document.getElementById('prof-name').value,
+                location: document.getElementById('prof-location').value,
+                phone_number: document.getElementById('prof-phone').value
+            })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            loadAccount();
+            const banner = document.getElementById('save-banner');
+            banner.classList.remove('hidden');
+            setTimeout(() => banner.classList.add('hidden'), 3000);
+        } else {
+            alert('Could not update profile: ' + errorText(data.detail));
+        }
+    });
+
+    document.getElementById('plot-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const res = await fetch('/api/plots', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: userId,
+                plot_name: document.getElementById('plot-name').value.trim(),
+                size_acres: parseFloat(document.getElementById('plot-size').value),
+                soil_type: document.getElementById('plot-soil').value.trim()
+            })
+        });
+        if (res.ok) {
+            document.getElementById('plot-name').value = '';
+            document.getElementById('plot-size').value = '';
+            document.getElementById('plot-soil').value = '';
+            loadAccount();
+        } else {
+            const err = await res.json();
+            alert('Could not add plot: ' + errorText(err.detail));
+        }
+    });
+
+    document.getElementById('cycle-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const res = await fetch('/api/crop-cycles', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                plot_id: parseInt(document.getElementById('cycle-plot-id').value, 10),
+                crop_name: document.getElementById('cycle-crop-name').value.trim(),
+                planting_date: document.getElementById('cycle-planting-date').value,
+                status: 'Active'
+            })
+        });
+        if (res.ok) {
+            document.getElementById('cycle-crop-name').value = '';
+            loadAccount();
+        } else {
+            const err = await res.json();
+            alert('Could not start crop cycle: ' + errorText(err.detail));
+        }
+    });
+
+    function logout() {
+        signOut(); // from /static/auth.js: ends the server session too
+    }
+
+    loadAccount();
+</script>
+</body>
+</html>
