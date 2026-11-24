@@ -1,22 +1,21 @@
 import os
 import re
 import secrets
+import sqlite3
 import time
 from datetime import date
 from pathlib import Path
-from typing import Literal, Optional
-from typing import Optional
-from pydantic import BaseModel
-from database import init_db
+from typing import Annotated, Literal, Optional
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request, Response, Depends
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from google import genai
 from google.genai import types
 from google.genai import errors as genai_errors
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from database import init_db, hash_password, verify_password, get_connection
 
@@ -179,6 +178,11 @@ def require_plot_owner(plot_id: int, user_id: int):
         raise HTTPException(status_code=403, detail="That plot does not belong to your account.")
 
 
+# Real numbers only. "Infinity" or "NaN" in the database would make every later
+# dashboard request fail, and the upper limit keeps totals from overflowing.
+FiniteNumber = Annotated[float, Field(allow_inf_nan=False, le=1_000_000_000)]
+
+
 class RegisterRequest(BaseModel):
     name: str
     email: str
@@ -207,14 +211,14 @@ class ChatRequest(BaseModel):
 
 class PlotRequest(BaseModel):
     plot_name: str
-    size_acres: float
+    size_acres: FiniteNumber
     soil_type: Optional[str] = ""
 
 class CropCycleRequest(BaseModel):
     plot_id: int
     crop_name: str
     planting_date: date
-    status: Literal["Active", "Harvested", "Completed"] = 'Active'
+    status: Literal["Active", "Completed"] = 'Active'
 
 class FertilizerRequest(BaseModel):
     cycle_id: int
@@ -223,21 +227,21 @@ class FinancialRequest(BaseModel):
     cycle_id: int
     transaction_type: str
     category: str
-    amount: float
+    amount: FiniteNumber
     transaction_date: date
     notes: Optional[str] = ""
 
 class HarvestRequest(BaseModel):
     cycle_id: int
     harvest_date: date
-    quantity_kg: float
+    quantity_kg: FiniteNumber
     storage_location: Optional[str] = "Main Store"
     notes: Optional[str] = ""
 
 class HarvestSaleRequest(BaseModel):
     harvest_id: int
-    sold_kg: float
-    amount: float
+    sold_kg: FiniteNumber
+    amount: FiniteNumber
     sale_date: date
     category: str = "Harvest Sale"
     notes: Optional[str] = ""
@@ -245,23 +249,23 @@ class HarvestSaleRequest(BaseModel):
 class TransactionCreateRequest(BaseModel):
     cycle_id: int
     type: str
-    amount: float
+    amount: FiniteNumber
     category: Optional[str] = ""
     description: Optional[str] = ""
-    date: Optional[str] = None
+    transaction_date: Optional[date] = None
     harvest_id: Optional[int] = None
-    quantity_kg: Optional[float] = None
+    quantity_kg: Optional[FiniteNumber] = None
 
 class CreateChatSessionRequest(BaseModel):
     title: Optional[str] = "New Agronomist Chat"
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-
-    init_db()
-    yield
-
-app = FastAPI(lifespan=lifespan)
+@app.exception_handler(RequestValidationError)
+def validation_error(request: Request, exc: RequestValidationError):
+    # Leave out the rejected value itself: NaN/Infinity can't be sent back as JSON
+    return JSONResponse(
+        status_code=422,
+        content={"detail": [{"loc": list(e["loc"]), "msg": e["msg"], "type": e["type"]} for e in exc.errors()]},
+    )
 
 @app.get("/")
 def read_root():
@@ -310,6 +314,9 @@ def register_farmer(req: RegisterRequest):
         )
         conn.commit()
         user_id = cursor.lastrowid
+    except sqlite3.IntegrityError:
+        # Two registrations at the same moment: the database's unique email rule stops the second
+        raise HTTPException(status_code=400, detail="An account with this email already exists.")
     finally:
         conn.close()
 
@@ -577,20 +584,6 @@ def create_log(log: LogRequest, current_user_id: int = Depends(get_current_user_
         conn.close()
     return {"status": "success", "message": "Farm log added successfully"}
 
-@app.get("/api/chat/history")
-def get_chat_history(current_user_id: int = Depends(get_current_user_id)):
-    """Returns the logged-in farmer's last 50 chat messages, oldest first."""
-    conn = get_db()
-    try:
-        rows = conn.execute("""
-            SELECT role, message, timestamp FROM chat_history
-            WHERE user_id = ?
-            ORDER BY id DESC LIMIT 50
-        """, (current_user_id,)).fetchall()
-    finally:
-        conn.close()
-    return {"messages": [dict(r) for r in reversed(rows)]}
-
 @app.post("/api/chat")
 def chat_with_agronomist(chat: ChatRequest, current_user_id: int = Depends(get_current_user_id)):
     client = require_ai_client()
@@ -623,7 +616,7 @@ def chat_with_agronomist(chat: ChatRequest, current_user_id: int = Depends(get_c
             cursor.execute("""
                 SELECT role, content FROM chat_messages
                 WHERE session_id = ?
-                ORDER BY message_id DESC LIMIT 9
+                ORDER BY message_id DESC LIMIT 10
             """, (chat.session_id,))
             past_messages = cursor.fetchall()
     finally:
@@ -809,16 +802,27 @@ def delete_transaction(transaction_id: int, current_user_id: int = Depends(get_c
         cursor = conn.cursor()
         # Only allow deleting a transaction that belongs to the logged-in farmer
         cursor.execute("""
-            SELECT fl.transaction_id
+            SELECT fl.harvest_id, fl.quantity_kg
             FROM financial_ledger fl
             JOIN crop_cycles cc ON fl.cycle_id = cc.cycle_id
             JOIN plots p ON cc.plot_id = p.plot_id
             WHERE fl.transaction_id = ? AND p.user_id = ?
         """, (transaction_id, current_user_id))
-        if not cursor.fetchone():
+        row = cursor.fetchone()
+        if not row:
             raise HTTPException(status_code=404, detail="Transaction not found for this account.")
 
         cursor.execute("DELETE FROM financial_ledger WHERE transaction_id = ?", (transaction_id,))
+        if cursor.rowcount == 0:   # another request deleted it first
+            raise HTTPException(status_code=404, detail="Transaction not found for this account.")
+
+        # Undoing a harvest sale puts the kilograms back into stock
+        if row["harvest_id"] is not None and row["quantity_kg"]:
+            cursor.execute("""
+                UPDATE harvest_inventory
+                SET remaining_kg = MIN(quantity_kg, ROUND(remaining_kg + ?, 2))
+                WHERE harvest_id = ?
+            """, (row["quantity_kg"], row["harvest_id"]))
         conn.commit()
     finally:
         conn.close()
@@ -850,7 +854,8 @@ def create_harvest(harvest: HarvestRequest, current_user_id: int = Depends(get_c
 
 @app.post("/api/harvests/sell")
 def sell_harvest_stock(sale: HarvestSaleRequest, current_user_id: int = Depends(get_current_user_id)):
-    if sale.sold_kg <= 0 or sale.amount <=0:
+    sold_kg = round(sale.sold_kg, 2)   # stock is kept to 2 decimals
+    if sold_kg <= 0 or sale.amount <= 0:
         raise HTTPException(status_code=400, detail="Sold weight and amount must be greater than zero.")
 
     conn = get_db()
@@ -872,7 +877,7 @@ def sell_harvest_stock(sale: HarvestSaleRequest, current_user_id: int = Depends(
             UPDATE harvest_inventory
             SET remaining_kg = ROUND(remaining_kg - ?, 2)
             WHERE harvest_id = ? AND remaining_kg >= ?
-        """, (sale.sold_kg, sale.harvest_id, sale.sold_kg))
+        """, (sold_kg, sale.harvest_id, sold_kg))
 
         if cursor.rowcount == 0:
             cursor.execute("SELECT remaining_kg FROM harvest_inventory WHERE harvest_id = ?", (sale.harvest_id,))
@@ -880,14 +885,16 @@ def sell_harvest_stock(sale: HarvestSaleRequest, current_user_id: int = Depends(
             raise HTTPException(status_code=400, detail=f"Only {left} kg remaining in stock for this batch.")
 
         cursor.execute("""
-            INSERT INTO financial_ledger (cycle_id, transaction_type, category, amount, transaction_date, notes)
-            VALUES (?, 'Income', ?, ?, ?, ?)
+            INSERT INTO financial_ledger (cycle_id, transaction_type, category, amount, transaction_date, notes, harvest_id, quantity_kg)
+            VALUES (?, 'Income', ?, ?, ?, ?, ?, ?)
         """, (
             batch["cycle_id"],
             sale.category,
             sale.amount,
             sale.sale_date.isoformat(),
-            sale.notes or f"Sold {sale.sold_kg} kg from Harvest #{sale.harvest_id}"
+            sale.notes or f"Sold {sold_kg} kg from Harvest #{sale.harvest_id}",
+            sale.harvest_id,
+            sold_kg
         ))
 
         cursor.execute("SELECT remaining_kg FROM harvest_inventory WHERE harvest_id = ?", (sale.harvest_id,))
@@ -898,7 +905,7 @@ def sell_harvest_stock(sale: HarvestSaleRequest, current_user_id: int = Depends(
 
     return {
         "status": "success",
-        "message": f"Recorded sale of {sale.sold_kg} kg and logged KSh {sale.amount:,.2f} income.",
+        "message": f"Recorded sale of {sold_kg} kg and logged KSh {sale.amount:,.2f} income.",
         "remaining_kg": new_remaining
     }
 
@@ -1013,8 +1020,13 @@ def create_transaction(req: TransactionCreateRequest, current_user_id: int = Dep
         if not cursor.fetchone():
             raise HTTPException(status_code=404, detail="Crop cycle not found for this account.")
 
+        cycle_id = req.cycle_id
+        harvest_id = None   # only set for a sale from harvest stock
+        sold_kg = None
         if tx_type == "income" and req.harvest_id is not None:
-            if req.quantity_kg is None or req.quantity_kg <= 0:
+            harvest_id = req.harvest_id
+            sold_kg = round(req.quantity_kg or 0, 2)   # stock is kept to 2 decimals
+            if sold_kg <= 0:
                 raise HTTPException(
                     status_code=400,
                     detail="Please enter the kilograms sold when linking income to harvest stock.",
@@ -1022,7 +1034,7 @@ def create_transaction(req: TransactionCreateRequest, current_user_id: int = Dep
 
             cursor.execute(
                 """
-                SELECT hi.harvest_id, hi.quantity_kg
+                SELECT hi.cycle_id
                 FROM harvest_inventory hi
                 JOIN crop_cycles cc ON hi.cycle_id = cc.cycle_id
                 JOIN plots p ON cc.plot_id = p.plot_id
@@ -1033,43 +1045,48 @@ def create_transaction(req: TransactionCreateRequest, current_user_id: int = Dep
             harvest_row = cursor.fetchone()
             if not harvest_row:
                 raise HTTPException(status_code=404, detail="Harvest stock batch not found for this account.")
+            cycle_id = harvest_row["cycle_id"]   # a stock sale always belongs to the batch's own crop
 
-            current_kg = float(harvest_row["quantity_kg"] or 0)
-            if req.quantity_kg > current_kg:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Insufficient harvest stock: only {current_kg:g} kg available.",
-                )
-
+            # Check and subtract in one statement, so two sales can't both pass
             cursor.execute(
                 """
                 UPDATE harvest_inventory
-                SET quantity_kg = quantity_kg - ?
-                WHERE harvest_id = ?
+                SET remaining_kg = ROUND(remaining_kg - ?, 2)
+                WHERE harvest_id = ? AND remaining_kg >= ?
                 """,
-                (req.quantity_kg, req.harvest_id),
+                (sold_kg, harvest_id, sold_kg),
             )
+            if cursor.rowcount == 0:
+                cursor.execute("SELECT remaining_kg FROM harvest_inventory WHERE harvest_id = ?", (harvest_id,))
+                left = cursor.fetchone()["remaining_kg"]
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Insufficient harvest stock: only {left:g} kg available.",
+                )
 
-            cursor.execute(
-                """
-                INSERT INTO finacial_ledger (cycle_id, type, amount, category, decription, tx_date)
-                VALUES (?, ?, ?, ?, ?, COALESCE(?, DATE('now')))
-                """,
-                (
-                    req.cycle_id,
-                    tx_type,
-                    req.amount,
-                    (req.category or ("Harvest Sale" if req.harvest_id else "")).strip(),
-                    (req.description or "").strip(),
-                    req.date,
-                ),
-            )
-            conn.commit()
-            tx_id = cursor.lastrowid
+        # Save the transaction - runs for every type, not only harvest sales
+        cursor.execute(
+            """
+            INSERT INTO financial_ledger (cycle_id, transaction_type, amount, category, notes, transaction_date, harvest_id, quantity_kg)
+            VALUES (?, ?, ?, ?, ?, COALESCE(?, DATE('now')), ?, ?)
+            """,
+            (
+                cycle_id,
+                tx_type.capitalize(),
+                req.amount,
+                (req.category or ("Harvest Sale" if req.harvest_id else "")).strip(),
+                (req.description or "").strip(),
+                req.transaction_date.isoformat() if req.transaction_date else None,
+                harvest_id,
+                sold_kg,
+            ),
+        )
+        conn.commit()
+        tx_id = cursor.lastrowid
     finally:
         conn.close()
 
-    return{"status": "success", "transaction_id": tx_id}
+    return {"status": "success", "transaction_id": tx_id}
 
 @app.get("/api/chat/sessions")
 def list_chat_sessions(current_user_id: int = Depends(get_current_user_id)):

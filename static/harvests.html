@@ -179,6 +179,7 @@
                 });
             } catch (err) {
                 console.error('Failed to load harvests:', err);
+                document.getElementById('harvest-table-body').innerHTML = `<tr><td colspan="8" class="p-3 text-rose-400 text-center">Could not load your harvests. Please refresh the page or try again shortly.</td></tr>`;
             }
         }
 

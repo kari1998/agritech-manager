@@ -241,7 +241,7 @@
         cyclesBody.innerHTML = '';
 
         if (cycles.length === 0) {
-            cyclesBody.innerHTML = `<tr><td colspan="4" class="p-3 text-slate-500 text-center">No crop cycles started yet.</td></tr>`;
+            cyclesBody.innerHTML = `<tr><td colspan="5" class="p-3 text-slate-500 text-center">No crop cycles started yet.</td></tr>`;
         } else {
             cycles.forEach(c => {
                 const isCompleted = (c.status || '').toLowerCase() === 'completed';

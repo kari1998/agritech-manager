@@ -544,8 +544,18 @@
             document.getElementById('chat-input').focus();
         });
 
+        // While the AI is answering, block sending again or switching chats
+        let chatBusy = false;
+        function setChatBusy(busy) {
+            chatBusy = busy;
+            document.querySelector('#chat-form button').disabled = busy;
+            document.getElementById('chat-session-select').disabled = busy;
+            document.getElementById('new-chat-btn').disabled = busy;
+        }
+
         document.getElementById('chat-form').addEventListener('submit', async (e) => {
             e.preventDefault();
+            if (chatBusy) return;
             const input = document.getElementById('chat-input');
             const message = input.value.trim();
             if (!message) return;
@@ -554,6 +564,7 @@
             if (!activeSessionId) chatContainer.innerHTML = '';
             appendChatMessage('user', message);
             input.value = '';
+            setChatBusy(true);
 
             const loadingId = 'loading-' + Date.now();
             chatContainer.innerHTML += `<div id="${loadingId}" class="bg-slate-800 p-2.5 rounded-lg text-slate-400 mr-4 italic">AI Agronomist is thinking...</div>`;
@@ -582,6 +593,8 @@
                 console.error('Chat request failed:', err);
                 document.getElementById(loadingId)?.remove();
                 chatContainer.innerHTML += `<div class="bg-red-950/60 border border-red-900 p-2.5 rounded-lg text-red-200 mr-4">Network error connecting to AI assistant.</div>`;
+            } finally {
+                setChatBusy(false);
             }
             chatContainer.scrollTop = chatContainer.scrollHeight;
         });

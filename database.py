@@ -74,6 +74,11 @@ def init_db():
             )
         """)
         _ensure_users_columns(cursor)
+        # One account per email, enforced by the database itself
+        try:
+            cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users (LOWER(email))")
+        except sqlite3.IntegrityError:
+            print("WARNING: some accounts share an email address; remove the duplicates to enforce unique emails.")
 
         # 2. Plots table (Linked to users)
         cursor.execute("""
@@ -121,9 +126,18 @@ def init_db():
                 amount REAL NOT NULL,
                 transaction_date TEXT NOT NULL,
                 notes TEXT,
+                harvest_id INTEGER,             -- set when the income is a sale from harvest stock
+                quantity_kg REAL,               -- kg sold, so deleting the sale can return them to stock
                 FOREIGN KEY (cycle_id) REFERENCES crop_cycles (cycle_id)
             )
         """)
+        # Add the harvest link to ledgers created before it existed
+        cursor.execute("PRAGMA table_info(financial_ledger)")
+        ledger_cols = {row["name"] for row in cursor.fetchall()}
+        if "harvest_id" not in ledger_cols:
+            cursor.execute("ALTER TABLE financial_ledger ADD COLUMN harvest_id INTEGER")
+        if "quantity_kg" not in ledger_cols:
+            cursor.execute("ALTER TABLE financial_ledger ADD COLUMN quantity_kg REAL")
 
         # 6. Chat History table (Linked to users for conversational memory)
         cursor.execute("""
@@ -190,6 +204,26 @@ def init_db():
         cursor.execute("PRAGMA table_info(chat_messages)")
         if "messages_id" in {row["name"] for row in cursor.fetchall()}:
             cursor.execute("ALTER TABLE chat_messages RENAME COLUMN messages_id TO message_id")
+
+        # Move messages from the old chat_history table into an "Earlier chats" session.
+        # Moved rows are deleted, so this only happens once per farmer.
+        cursor.execute("""
+            SELECT ch.user_id, MIN(ch.timestamp) AS first_at, MAX(ch.timestamp) AS last_at
+            FROM chat_history ch
+            JOIN users u ON u.user_id = ch.user_id
+            GROUP BY ch.user_id
+        """)
+        for old in cursor.fetchall():
+            cursor.execute("""
+                INSERT INTO chat_sessions (user_id, title, created_at, updated_at)
+                VALUES (?, 'Earlier chats', COALESCE(?, DATETIME('now')), COALESCE(?, DATETIME('now')))
+            """, (old["user_id"], old["first_at"], old["last_at"]))
+            cursor.execute("""
+                INSERT INTO chat_messages (session_id, user_id, role, content, created_at)
+                SELECT ?, user_id, role, message, COALESCE(timestamp, DATETIME('now'))
+                FROM chat_history WHERE user_id = ? ORDER BY id
+            """, (cursor.lastrowid, old["user_id"]))
+            cursor.execute("DELETE FROM chat_history WHERE user_id = ?", (old["user_id"],))
 
         # Older databases seeded the demo farmer with no email or password,
         # so nobody could log in to see the sample farm. Give it the demo login.

@@ -1,0 +1,15 @@
+# Secrets
+.env
+.env.*
+
+# Databases (farmers' data)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/

@@ -34,7 +34,7 @@
                 </div>
 
                 <form id="financial-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 mb-6 bg-slate-900 p-4 rounded-lg border border-slate-700">
-                    <div id="harvest-sale-fields" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-700 rounded-lg p-3">
+                    <div id="harvest-sale-fields" class="hidden sm:col-span-2 lg:col-span-6 grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-700 rounded-lg p-3">
                         <div>
                             <label class="block text-xs text-slate-400 mb-1">From Harvest Stock (Optional)</label>
                             <select id="tx-harvest-id" class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
@@ -204,12 +204,12 @@
 
                 select.innerHTML = `<option value="">- General Income / Not tied to stock -</option>`;
                 availableHarvests
-                    .filter(h => Number(h.quantity_kg || 0) > 0)
+                    .filter(h => Number(h.remaining_kg || 0) > 0)
                     .forEach(h => {
                         const batchLabel = h.batch_name || h.crop_name || `Batch #${h.harvest_id}`;
                         const opt = document.createElement('option');
                         opt.value = h.harvest_id;
-                        opt.text = `${batchLabel} (${Number(h.quantity_kg)} kg available)`;
+                        opt.text = `${batchLabel} (${Number(h.remaining_kg)} kg available)`;
                         select.appendChild(opt);
                     });
             }
@@ -224,7 +224,7 @@
                 }
                 const batch = availableHarvests.find(h => Number(h.harvest_id) === selectedId);
                 if (batch) {
-                    if (kgInput) kgInput.max = Number(batch.quantity_kg || 0);
+                    if (kgInput) kgInput.max = Number(batch.remaining_kg || 0);
                     if (batch.cycle_id && cycleSelect) {
                         cycleSelect.value = batch.cycle_id;
                     }
@@ -252,6 +252,7 @@
                 const res = await fetch(`/api/dashboard/${userId}`);
                 if (!res.ok) {
                     console.error('Failed to load financials: HTTP', res.status);
+                    document.getElementById('financial-table-body').innerHTML = `<tr><td colspan="6" class="p-3 text-rose-400 text-center">Could not load your financials. Please refresh the page or try again shortly.</td></tr>`;
                     return;
                 }
                 const data = await res.json();
@@ -281,6 +282,7 @@
                     const ledgerRes = await fetch(`/api/financials/${userId}`);
                     if (!ledgerRes.ok) {
                         console.error('Failed to load ledger: HTTP', ledgerRes.status);
+                        finTable.innerHTML = `<tr><td colspan="6" class="p-3 text-rose-400 text-center">Could not load the ledger. Please refresh the page or try again shortly.</td></tr>`;
                         return;
                     }
                     const ledger = await ledgerRes.json();
@@ -315,15 +317,32 @@
                 const rawHarvestId = document.getElementById('tx-harvest-id')?.value;
                 const rawKg = document.getElementById('tx-quantity-kg')?.value;
 
-                if (payload.transaction_type.toLowerCase() === 'income' && rawHarvestId) {
-                    payload.harvest_id = parseInt(rawHarvestId, 10);
-                    payload.quantity_kg = parseFloat(rawKg);
+                // Normal entries go to /api/financials.
+                // A sale from harvest stock goes to /api/transactions, which also takes the kg out of stock.
+                let url = '/api/financials';
+                let body = payload;
+                if (payload.transaction_type === 'Income' && rawHarvestId) {
+                    if (!(parseFloat(rawKg) > 0)) {
+                        alert('Please enter the kilograms sold from this harvest batch.');
+                        return;
+                    }
+                    url = '/api/transactions';
+                    body = {
+                        cycle_id: payload.cycle_id,
+                        type: payload.transaction_type,
+                        amount: payload.amount,
+                        category: payload.category,
+                        description: payload.notes,
+                        transaction_date: payload.transaction_date,
+                        harvest_id: parseInt(rawHarvestId, 10),
+                        quantity_kg: parseFloat(rawKg)
+                    };
                 }
 
-                const res = await fetch('/api/financials', {
+                const res = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify(body)
                 });
 
                 if (res.ok) {
@@ -331,7 +350,10 @@
                     document.getElementById('fin-amount').value = '';
                     const kgInput = document.getElementById('tx-quantity-kg');
                     const harvestSelect = document.getElementById('tx-harvest-id');
-                    if (kgInput) kgInput.value = '';
+                    if (kgInput) {
+                        kgInput.value = '';
+                        kgInput.removeAttribute('max');
+                    }
                     if (harvestSelect) harvestSelect.value = '';
                     loadFinancials();
                 } else {
